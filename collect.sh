@@ -21,7 +21,7 @@ for domain in $domains; do
   waybackurls "$domain" >> urls.txt
 
   # use katana to find URLs from other sources
-  katana -u "$domain" -o urls.txt
+  katana -u "$domain" >> urls.txt
 
   # use gau to find URLs from Google and other search engines
   gau "$domain" >> urls.txt
