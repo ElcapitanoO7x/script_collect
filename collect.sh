@@ -1,5 +1,6 @@
 #!/bin/bash
-
+git clone https://github.com/projectdiscovery/fuzzing-templates.git
+mkdir Results 
 # Function to check if a command exists
 command_exists() {
   command -v "$1" >/dev/null 2>&1
@@ -23,8 +24,7 @@ perform_fuzzing_scans() {
   echo "✨ Start Fuzzing Scans for $domain ✨"
 
   # Perform fuzzing scans using Nuclei templates
-  git clone https://github.com/projectdiscovery/fuzzing-templates.git
-  mkdir Results 
+
   nuclei -l "$urls_file" $NUCLEI_FLAGS -t "/fuzzing-templates/lfi" -o "Results/$domain-lfi.txt" &
   nuclei -l "$urls_file" $NUCLEI_FLAGS -t "/fuzzing-templates/xss/reflected-xss.yaml" -o "Results/$domain-xss.txt" &
   nuclei -l "$urls_file" $NUCLEI_FLAGS -t "/fuzzing-templates/sqli/error-based.yaml" -o "Results/$domain-sqli.txt" &
