@@ -6,7 +6,7 @@ command_exists() {
 }
 
 # Check if required commands are available
-required_commands=("waybackurls" "katana" "gau" "hackrawler" "nuclei")
+required_commands=("waybackurls" "katana" "gau" "hakrawler" "nuclei")
 for cmd in "${required_commands[@]}"; do
   if ! command_exists "$cmd"; then
     echo "Error: $cmd command not found. Please make sure it is installed and available in your PATH."
@@ -14,16 +14,18 @@ for cmd in "${required_commands[@]}"; do
   fi
 done
 
+
 # Function to process each domain
 process_domain() {
   domain="$1"
   echo "Processing $domain..."
 
   # Combine the output from different tools into a single file for each domain
-  { waybackurls "$domain"; katana -u "$domain"; gau "$domain"; echo "$domain" | hackrawler; } | sort -u > "$domain-urls.txt"
+  { waybackurls "$domain"; katana -u "$domain"; gau "$domain"; hakrawler <<< "$domain"; } | sort -u > "$domain-urls.txt"
 
   echo "Done processing $domain."
 }
+
 
 # Function to perform fuzzing scans for each domain
 perform_fuzzing_scans() {
