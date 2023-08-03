@@ -12,8 +12,8 @@ Before running the script, make sure you have the following dependencies install
 - `hakrawler`
 - `nuclei`
 - `git` (for cloning the required Nuclei templates)
+- `go`
 
-You can install these dependencies using package managers like `apt`, `yum`, or `brew`.
 
 ## Installation
 
@@ -21,6 +21,7 @@ You can install these dependencies using package managers like `apt`, `yum`, or 
 
 ```bash
 git clone https://github.com/projectdiscovery/fuzzing-templates.git
+git clone https://github.com/hithmast/script_collect.git
 ```
 
 2. Create a `Results` directory to store the output files:
