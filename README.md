@@ -60,7 +60,7 @@ The script will start processing each domain in parallel, collecting URLs, and t
 
 ## Credits
 
-- Script created by ElcapitanoO7x
+- Script created by ElcapitanoO7x [https://github.com/ElcapitanoO7x/]
 - Upgraded by hithmast
 
 **Disclaimer:** Please use this script responsibly and only on domains that you have permission to scan. Running security scans on unauthorized targets may be illegal and unethical.
