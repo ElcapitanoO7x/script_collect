@@ -1,6 +1,5 @@
 #!/bin/bash
-git clone https://github.com/projectdiscovery/fuzzing-templates.git
-mkdir Results 
+
 # Function to check if a command exists
 command_exists() {
   command -v "$1" >/dev/null 2>&1
