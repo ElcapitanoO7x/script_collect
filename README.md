@@ -24,7 +24,7 @@ Before running the script, ensure you have the following prerequisites:
 1. Clone this repository to your local machine:
 
    ```bash
-   git clone https://github.com/hithmast/script_collect/th3Collect0r.git
+   git clone [https://github.com/hithmast/script_collect/th3Collect0r.git](https://github.com/hithmast/script_collect.git)
    ```
 
 2. Change into the project directory:
