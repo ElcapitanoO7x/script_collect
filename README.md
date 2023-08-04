@@ -93,5 +93,5 @@ Contributions are welcome! If you find any issues or have suggestions for improv
 
 ## Author
 
-Your Mohamed Ashraf - [Your GitHub Profile](https://github.com/ElcapitanoO7x)
-Your Ali Emara - [Your GitHub Profile](https://github.com/hithmast)
+ Mohamed Ashraf - [Elcapitano07x](https://github.com/ElcapitanoO7x)
+ Ali Emara - [Hithmast](https://github.com/hithmast)
