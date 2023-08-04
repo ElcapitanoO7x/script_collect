@@ -6,7 +6,7 @@ command_exists() {
 }
 
 # Check if required commands are available
-required_commands=("waybackurls" "katana" "gau" "hakrawler" "nuclei" "git")
+required_commands=("waybackurls" "katana" "gau" "hakrawler" "nuclei" "git" "parallel" "sshpass")
 for cmd in "${required_commands[@]}"; do
   if ! command_exists "$cmd"; then
     echo "Error: $cmd command not found. Please make sure it is installed and available in your PATH."
@@ -16,19 +16,18 @@ done
 
 # Function to perform fuzzing scans for each domain
 perform_fuzzing_scans() {
-  domain="$2"
-  urls_file="$1"
-  NUCLEI_FLAGS="-nh 200 -c 100 -retries 2"
+  local domain="$2"
+  local urls_file="$1"
+  local custom_nuclei_flags="${3:-}"
 
   echo "✨ Start Fuzzing Scans for $domain ✨"
 
-  # Perform fuzzing scans using Nuclei templates
-
-  nuclei -l "$urls_file" $NUCLEI_FLAGS -t "/fuzzing-templates/lfi" -o "Results/$domain-lfi.txt" &
-  nuclei -l "$urls_file" $NUCLEI_FLAGS -t "/fuzzing-templates/xss/reflected-xss.yaml" -o "Results/$domain-xss.txt" &
-  nuclei -l "$urls_file" $NUCLEI_FLAGS -t "/fuzzing-templates/sqli/error-based.yaml" -o "Results/$domain-sqli.txt" &
-  nuclei -l "$urls_file" $NUCLEI_FLAGS -t "/fuzzing-templates/redirect" -o "Results/$domain-redirect.txt" &
-  nuclei -l "$urls_file" $NUCLEI_FLAGS -t "/fuzzing-templates/ssrf" -o "Results/$domain-ssrf.txt" &
+  # Perform fuzzing scans using Nuclei templates with custom flags if provided
+  nuclei -l "$urls_file" "$custom_nuclei_flags" -t "$template1" -o "Results/${domain}-${template1_name}.txt" &
+  nuclei -l "$urls_file" "$custom_nuclei_flags" -t "$template2" -o "Results/${domain}-${template2_name}.txt" &
+  nuclei -l "$urls_file" "$custom_nuclei_flags" -t "$template3" -o "Results/${domain}-${template3_name}.txt" &
+  nuclei -l "$urls_file" "$custom_nuclei_flags" -t "$template4" -o "Results/${domain}-${template4_name}.txt" &
+  nuclei -l "$urls_file" "$custom_nuclei_flags" -t "$template5" -o "Results/${domain}-${template5_name}.txt" &
 
   # Wait for all fuzzing scans to finish for this domain
   wait
@@ -38,61 +37,156 @@ perform_fuzzing_scans() {
 
 # Function to process each domain
 process_domain() {
-  domain="$1"
+  local domain="$1"
   echo "Processing $domain..."
 
-  # Replace special characters in the domain name with underscores
-  sanitized_domain=$(echo "$domain" | tr -d '[:punct:]' | tr '[:upper:]' '[:lower:]' | tr -s ' ' '_')
+  # Validate domain name format using regex
+  if ! [[ "$domain" =~ ^[a-zA-Z0-9.-]+$ ]]; then
+    echo "Error: Invalid domain name format: $domain"
+    return
+  fi
 
-  # Generate a hash of the sanitized domain name to use as the temporary file prefix
-  prefix=$(echo -n "$sanitized_domain" | sha1sum | cut -d' ' -f1)
+  # Generate a random prefix for the temporary directory name
+  local temp_dir=$(mktemp -d "tmp.XXXXXXXXXX")
 
-  # Replace any remaining non-alphanumeric characters in the prefix with underscores
-  prefix=$(echo "$prefix" | tr -C '[:alnum:]' '_')
+  # Create temporary directories for storing tool outputs
+  local results_dir="Results"
 
   # Run the tools (waybackurls, katana, gau) in parallel and store their output in temporary files
-  waybackurls "$domain" > "$prefix-wayback.txt" &
-  katana -u "$domain" > "$prefix-katana.txt" &
-  gau "$domain" > "$prefix-gau.txt" &
+  /usr/bin/waybackurls "$domain" > "$temp_dir/${prefix}-wayback.txt" &
+  /usr/bin/katana -u "$domain" > "$temp_dir/${prefix}-katana.txt" &
+  /usr/bin/gau "$domain" > "$temp_dir/${prefix}-gau.txt" &
 
   # Run hakrawler individually and store its output in a separate file
-  echo "$domain" | hakrawler > "$prefix-hakrawler.txt"
+  echo "$domain" | /usr/bin/hakrawler > "$temp_dir/${prefix}-hakrawler.txt"
 
   # Wait for all background processes to finish
   wait
 
   # Check if the temporary files exist before combining their outputs
-  if [ -f "$prefix-wayback.txt" ] && [ -f "$prefix-katana.txt" ] && [ -f "$prefix-gau.txt" ] && [ -f "$prefix-hakrawler.txt" ]; then
+  if [ -f "$temp_dir/${prefix}-wayback.txt" ] && [ -f "$temp_dir/${prefix}-katana.txt" ] && [ -f "$temp_dir/${prefix}-gau.txt" ] && [ -f "$temp_dir/${prefix}-hakrawler.txt" ]; then
     # Combine the output from different tools into a single file for each domain
-    cat "$prefix-wayback.txt" "$prefix-katana.txt" "$prefix-gau.txt" "$prefix-hakrawler.txt" | sort -u > "Results/$prefix-urls.txt"
+    cat "$temp_dir/${prefix}-wayback.txt" "$temp_dir/${prefix}-katana.txt" "$temp_dir/${prefix}-gau.txt" "$temp_dir/${prefix}-hakrawler.txt" | sort -u > "$results_dir/${prefix}-urls.txt"
 
     # Check if the URLs file is not empty before proceeding with fuzzing scans
-    if [ -s "$prefix-urls.txt" ]; then
-      perform_fuzzing_scans "$prefix-urls.txt" "$domain"
+    if [ -s "$results_dir/${prefix}-urls.txt" ]; then
+      perform_fuzzing_scans "$results_dir/${prefix}-urls.txt" "$domain" "$custom_nuclei_flags"
     else
       echo "No URLs found for $domain. Skipping fuzzing scans."
     fi
 
     # Clean up temporary files
-    rm -f "$prefix-wayback.txt" "$prefix-katana.txt" "$prefix-gau.txt" "$prefix-hakrawler.txt" "$prefix-urls.txt"
+    rm -rf "$temp_dir"
   else
     echo "No data found for $domain. Skipping combining the outputs and fuzzing scans."
   fi
 
   echo "Done processing $domain."
 }
+
 # Export the perform_fuzzing_scans function
 export -f perform_fuzzing_scans
 
-echo "✨ Start Domain Processing in Parallel ✨"
+# Function to display usage instructions
+print_usage() {
+  echo "Usage: $0 [OPTIONS] FILE_PATH"
+  echo "Scan a list of domains for security vulnerabilities using various tools."
+  echo "Options:"
+  echo "  -s             Silence mode. Run the script in the background."
+  echo "  -t PARALLEL    Number of processes to run in parallel using GNU Parallel. Default: 4."
+  echo "  -nf FLAGS      Custom Nuclei flags to use for all scans."
+  echo "  -t1 TEMPLATE   Specify the custom Nuclei template for the first scan. Default: /fuzzing-templates/lfi"
+  echo "  -t2 TEMPLATE   Specify the custom Nuclei template for the second scan. Default: /fuzzing-templates/xss/reflected-xss.yaml"
+  echo "  -t3 TEMPLATE   Specify the custom Nuclei template for the third scan. Default: /fuzzing-templates/sqli/error-based.yaml"
+  echo "  -t4 TEMPLATE   Specify the custom Nuclei template for the fourth scan. Default: /fuzzing-templates/redirect"
+  echo "  -t5 TEMPLATE   Specify the custom Nuclei template for the fifth scan. Default: /fuzzing-templates/ssrf"
+  echo "  -h, --help     Print this help message and exit."
+  echo ""
+  echo "Note: Make sure you have proper authorization to perform security scans on the provided domains."
+}
 
-# Process each domain in parallel using GNU Parallel
-export -f process_domain
-cat "$1" | parallel -j 4 process_domain
+# Read command-line arguments
+file_path=""
+silence_mode=""
+parallel_processes=""
+custom_nuclei_flags=""
+template1="/fuzzing-templates/lfi"
+template2="/fuzzing-templates/xss/reflected-xss.yaml"
+template3="/fuzzing-templates/sqli/error-based.yaml"
+template4="/fuzzing-templates/redirect"
+template5="/fuzzing-templates/ssrf"
+
+template1_name="lfi"
+template2_name="xss"
+template3_name="sqli"
+template4_name="redirect"
+template5_name="ssrf"
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -s)
+      silence_mode="yes"
+      ;;
+    -t)
+      shift
+      parallel_processes="$1"
+      ;;
+    -nf)
+      shift
+      custom_nuclei_flags="$1"
+      ;;
+    -t1)
+      shift
+      template1="$1"
+      ;;
+    -t2)
+      shift
+      template2="$1"
+      ;;
+    -t3)
+      shift
+      template3="$1"
+      ;;
+    -t4)
+      shift
+      template4="$1"
+      ;;
+    -t5)
+      shift
+      template5="$1"
+      ;;
+    -h | --help)
+      print_usage
+      exit 0
+      ;;
+    *)
+      file_path="$1"
+      ;;
+  esac
+  shift
+done
+
+if [ -z "$file_path" ]; then
+  echo "Error: Please provide a file containing a list of domains to process."
+  print_usage
+  exit 1
+fi
+# Validate input file existence and readability
+if [ ! -f "$file_path" ] || [ ! -r "$file_path" ]; then
+  echo "Error: File not found or not readable: $file_path"
+  exit 1
+fi
+
+if [ -n "$silence_mode" ]; then
+  # Run the script in background (silence mode)
+  echo "✨ Start Domain Processing in Silence Mode ✨"
+  cat "$file_path" | parallel -j "${parallel_processes:-4}" -u --bar process_domain {}
+else
+  echo "✨ Start Domain Processing ✨"
+  cat "$file_path" | parallel -j "${parallel_processes:-4}" --bar process_domain {}
+fi
 
 echo "✨ All Domains Processed. Starting Fuzzing Scans ✨"
-
-# Perform fuzzing scans for each domain in parallel using GNU Parallel
-cat "$1" | parallel -j 4 perform_fuzzing_scans
+cat "$file_path" | parallel -j "${parallel_processes:-4}" --bar perform_fuzzing_scans {}
 
 echo "✨ All Fuzzing Scans Completed.✨"
