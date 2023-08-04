@@ -1,6 +1,6 @@
 # th3Collect0r
 
-![GitHub](https://img.shields.io/github/license/hithmast/th3Collect0r)
+![GitHub](https://img.shields.io/github/license/hithmast/script_collect)
 
 th3Collect0r is a bash script designed to automate the process of scanning a list of domains for security vulnerabilities using various tools. It combines the outputs of waybackurls, katana, gau, and hakrawler, and performs fuzzing scans using custom Nuclei templates to identify potential security issues.
 
