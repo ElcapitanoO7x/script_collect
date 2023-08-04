@@ -17,7 +17,6 @@ Before running the script, ensure you have the following prerequisites:
    - `nuclei`
    - `git`
    - `parallel`
-   - `sshpass` (if using password authentication for SSH)
 3. Proper authorization to perform security scans on the provided domains.
 
 ## Installation
