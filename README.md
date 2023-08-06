@@ -91,7 +91,7 @@ th3Collect0r is provided for educational and research purposes only. Use this sc
 
 Contributions are welcome! If you find any issues or have suggestions for improvements, please open an issue or create a pull request.
 
-## Author
+## Authors
 
- Mohamed Ashraf - [Elcapitano07x](https://github.com/ElcapitanoO7x)
- Ali Emara - [Hithmast](https://github.com/hithmast)
+- Mohamed Ashraf - [Elcapitano07x](https://github.com/ElcapitanoO7x)
+- Ali Emara - [Hithmast](https://github.com/hithmast)
