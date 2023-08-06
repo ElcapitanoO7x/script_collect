@@ -16,8 +16,8 @@ done
 
 # Function to perform fuzzing scans for each domain
 perform_fuzzing_scans() {
-  local domain="$2"
   local urls_file="$1"
+  local domain="$2"
   local custom_nuclei_flags="${3:-}"
 
   echo "✨ Start Fuzzing Scans for $domain ✨"
@@ -40,25 +40,46 @@ process_domain() {
   local domain="$1"
   echo "Processing $domain..."
 
-  # Validate domain name format using regex
-  if ! [[ "$domain" =~ ^[a-zA-Z0-9.-]+$ ]]; then
-    echo "Error: Invalid domain name format: $domain"
-    return
-  fi
+  # Extract the domain name from the URL
+  local domain_name="${domain#*://}"
 
   # Generate a random prefix for the temporary directory name
-  local temp_dir=$(mktemp -d "tmp.XXXXXXXXXX")
+  local prefix=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 8)
 
   # Create temporary directories for storing tool outputs
   local results_dir="Results"
+  mkdir -p "$results_dir" || { echo "Error: Unable to create directory $results_dir"; exit 1; }
+  local temp_dir=$(mktemp -d "$results_dir/tmp.XXXXXXXXXX") || { echo "Error: Unable to create temporary directory"; exit 1; }
 
-  # Run the tools (waybackurls, katana, gau) in parallel and store their output in temporary files
-  /usr/bin/waybackurls "$domain" > "$temp_dir/${prefix}-wayback.txt" &
-  /usr/bin/katana -u "$domain" > "$temp_dir/${prefix}-katana.txt" &
-  /usr/bin/gau "$domain" > "$temp_dir/${prefix}-gau.txt" &
+  # Run waybackurls and gau with domain name
+  if ! waybackurls "$domain" > "$temp_dir/${prefix}-wayback.txt"; then
+    echo "Error: waybackurls failed for $domain_name"
+    rm -rf "$temp_dir"
+    exit 1
+  fi
 
+  if ! gau "$domain" > "$temp_dir/${prefix}-gau.txt"; then
+    echo "Error: gau failed for $domain_name"
+    rm -rf "$temp_dir"
+    exit 1
+  fi
+
+  # Run katana with full URL
+  if ! katana -u "$domain" > "$temp_dir/${prefix}-katana.txt"; then
+    echo "Error: katana failed for $domain"
+    rm -rf "$temp_dir"
+    exit 1
+  fi
+  
   # Run hakrawler individually and store its output in a separate file
-  echo "$domain" | /usr/bin/hakrawler > "$temp_dir/${prefix}-hakrawler.txt"
+  if ! echo "$domain" | /usr/bin/hakrawler > "$temp_dir/${prefix}-hakrawler.txt"; then
+    echo "Error: hakrawler failed for $domain"
+    rm -rf "$temp_dir"
+    exit 1
+  fi
+
+  # Create a progress bar for each domain
+  (pv -n "$file_path" | grep -n "$domain" | pv -l -s $(wc -l < "$file_path") > /dev/null) 2>&1 &
 
   # Wait for all background processes to finish
   wait
@@ -79,13 +100,14 @@ process_domain() {
     rm -rf "$temp_dir"
   else
     echo "No data found for $domain. Skipping combining the outputs and fuzzing scans."
+    rm -rf "$temp_dir"
   fi
 
   echo "Done processing $domain."
 }
 
 # Export the perform_fuzzing_scans function
-export -f perform_fuzzing_scans
+export -f perform_fuzzing_scans process_domain
 
 # Function to display usage instructions
 print_usage() {
