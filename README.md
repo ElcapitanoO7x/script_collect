@@ -1,6 +1,3 @@
-My apologies for missing those sections. Here's the updated README.md with the single target and silent mode sections included:
-
-```markdown
 # th3Collect0r
 
 [![GitHub](https://img.shields.io/github/license/hithmast/script_collect)](https://github.com/hithmast/script_collect/blob/th3Collect0r/LICENSE)
