@@ -1,10 +1,3 @@
-**Description:**
-
-th3Collect0r is a Go program designed to automate the process of scanning a list of domains for security vulnerabilities using various tools. It leverages the power of concurrent execution to efficiently gather information and perform security scans on multiple domains simultaneously. th3Collect0r integrates tools like waybackurls, katana, gau, and hakrawler to collect URLs and then uses custom Nuclei templates for fuzzing scans to identify potential security issues.
-
-**README.md:**
-
-```markdown
 # th3Collect0r
 
 [![GitHub](https://img.shields.io/github/license/hithmast/script_collect)](https://github.com/hithmast/script_collect/blob/th3Collect0r/LICENSE)
