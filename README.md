@@ -1,3 +1,6 @@
+My apologies for missing those sections. Here's the updated README.md with the single target and silent mode sections included:
+
+```markdown
 # th3Collect0r
 
 [![GitHub](https://img.shields.io/github/license/hithmast/script_collect)](https://github.com/hithmast/script_collect/blob/th3Collect0r/LICENSE)
@@ -53,6 +56,11 @@ Options:
 - `-t3 TEMPLATE`: Specify the custom Nuclei template for the third scan.
 - `-t4 TEMPLATE`: Specify the custom Nuclei template for the fourth scan.
 - `-t5 TEMPLATE`: Specify the custom Nuclei template for the fifth scan.
+- `-t6 TEMPLATE`: Specify the custom Nuclei template for the sixth scan.
+- `-t7 TEMPLATE`: Specify the custom Nuclei template for the seventh scan.
+- `-t8 TEMPLATE`: Specify the custom Nuclei template for the eighth scan.
+- `-s`: Run th3Collect0r in silent mode. No output will be displayed.
+- `-d DOMAIN`: Perform scans on a single target domain.
 
 ## Examples
 
@@ -62,7 +70,19 @@ Options:
    ./th3Collect0r -p 4 domains.txt
    ```
 
-2. Customize the Nuclei flags and templates:
+2. Run th3Collect0r in silent mode:
+
+   ```bash
+   ./th3Collect0r -s -p 4 domains.txt
+   ```
+
+3. Perform scans on a single target domain:
+
+   ```bash
+   ./th3Collect0r -d example.com
+   ```
+
+4. Customize the Nuclei flags and templates:
 
    ```bash
    ./th3Collect0r -nf "-t cves" -t1 /path/to/custom-template.yaml domains.txt
