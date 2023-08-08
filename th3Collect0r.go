@@ -21,7 +21,7 @@ func main() {
 	// Print tool version and ASCII art
 	fmt.Printf("       Th3 Collect0r %s \n", toolVersion)
 	fmt.Printf("By : Mohamed Ashraf & Ali Emara\n")
-	fmt.Printf("Don't forget to include fuzzing-template/ directory in %s \n", exec.Command("echo $HOME"))
+	fmt.Printf("Don't forget to include fuzzing-template/ directory in %s \n", exec.Command("echo $HOME/nuclei-templates"))
 	printASCIIArt()
 	// Parse command-line arguments
 	args := os.Args[1:]
