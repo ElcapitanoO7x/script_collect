@@ -13,7 +13,7 @@ import (
 	"sync"
 )
 
-const toolVersion = "v1"
+const toolVersion = "v1.0.1"
 
 var templatesPath = ""
 
@@ -40,6 +40,13 @@ func main() {
 			"fuzzing-templates/sqli",
 			"fuzzing-templates/redirect",
 			"fuzzing-templates/ssrf",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
 		}
 	)
 
@@ -50,6 +57,28 @@ func main() {
 		case "-d":
 			if i+1 < len(args) {
 				domain := args[i+1]
+				// Process other arguments here if needed
+				for j := i + 2; j < len(args); j++ {
+					// Process other arguments as needed
+					switch args[j] {
+					case "-p":
+						j++
+						parallelProcesses = parseInt(args[j], parallelProcesses)
+					case "-nf":
+						j++
+						customNucleiFlags = args[j]
+					default:
+						if strings.HasPrefix(args[j], "-t") {
+							templateIdx := int(args[j][2] - '1')
+							if templateIdx >= 0 && templateIdx < len(templateNames) {
+								templateNames[templateIdx] = args[j+1]
+							}
+							j++ // Skip the template argument value
+						} else {
+							fmt.Printf("Unrecognized option: %s\n", args[j])
+						}
+					}
+				}
 				processDomain(domain, customNucleiFlags, templateNames)
 				return
 			} else {
@@ -75,12 +104,6 @@ func main() {
 		case "-nf":
 			i++
 			customNucleiFlags = args[i]
-		case "-t1", "-t2", "-t3", "-t4", "-t5":
-			i++
-			templateIdx := int(arg[2] - '1')
-			if templateIdx >= 0 && templateIdx < len(templateNames) {
-				templateNames[templateIdx] = args[i]
-			}
 		case "-tp":
 			i++
 			templatesPath = args[i]
@@ -217,7 +240,14 @@ func processDomain(domain, customNucleiFlags string, templateNames []string) {
 	// Extract domain name from the URL
 	domainName := strings.TrimPrefix(domain, "http://")
 	domainName = strings.TrimPrefix(domainName, "https://")
+	//Create Result dir
+	err := os.Mkdir("Results", 0750)
+	if err != nil && !os.IsExist(err) {
+		log.Fatalf("Error creating Results directory: %v", err)
+		log.Fatal(err)
 
+	}
+	defer os.Exit(0)
 	// Create a temporary directory
 	tempDir, err := os.MkdirTemp("", "scan-temp-")
 	if err != nil {
