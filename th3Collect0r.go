@@ -54,40 +54,10 @@ func main() {
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		switch arg {
-		case "-d":
-			if i+1 < len(args) {
-				domain := args[i+1]
-				// Process other arguments here if needed
-				for j := i + 2; j < len(args); j++ {
-					// Process other arguments as needed
-					switch args[j] {
-					case "-p":
-						j++
-						parallelProcesses = parseInt(args[j], parallelProcesses)
-					case "-nf":
-						j++
-						customNucleiFlags = args[j]
-					default:
-						if strings.HasPrefix(args[j], "-t") {
-							templateIdx := int(args[j][2] - '1')
-							if templateIdx >= 0 && templateIdx < len(templateNames) {
-								templateNames[templateIdx] = args[j+1]
-							}
-							j++ // Skip the template argument value
-						} else {
-							fmt.Printf("Unrecognized option: %s\n", args[j])
-						}
-					}
-				}
-				processDomain(domain, customNucleiFlags, templateNames)
-				return
-			} else {
-				fmt.Println("Error: Missing domain after -d option")
-				return
-			}
 		case "-f":
 			if i+1 < len(args) {
 				filePath = args[i+1]
+				i++ // Move to the next argument after the file path
 			} else {
 				fmt.Println("Error: Missing file path after -f option")
 				return
@@ -108,8 +78,19 @@ func main() {
 			i++
 			templatesPath = args[i]
 		default:
-			fmt.Printf("Unrecognized option: %s\n", arg)
-			return
+			if strings.HasPrefix(arg, "-t") {
+				templateIdx := int(arg[2] - '1')
+				if templateIdx >= 0 && templateIdx < len(templateNames) {
+					templateNames[templateIdx] = args[i+1]
+					i++ // Move to the next argument after the template
+				} else {
+					fmt.Printf("Unrecognized option: %s\n", arg)
+					return
+				}
+			} else {
+				fmt.Printf("Unrecognized option: %s\n", arg)
+				return
+			}
 		}
 	}
 
