@@ -48,14 +48,14 @@ Options:
 
 - `-p PARALLEL`: Number of processes to run in parallel. Default: 4.
 - `-nf FLAGS`: Custom Nuclei flags to use for all scans.
-- `-t1 TEMPLATE`: Specify the custom Nuclei template for the first scan.
-- `-t2 TEMPLATE`: Specify the custom Nuclei template for the second scan.
-- `-t3 TEMPLATE`: Specify the custom Nuclei template for the third scan.
-- `-t4 TEMPLATE`: Specify the custom Nuclei template for the fourth scan.
-- `-t5 TEMPLATE`: Specify the custom Nuclei template for the fifth scan.
-- `-t6 TEMPLATE`: Specify the custom Nuclei template for the sixth scan.
-- `-t7 TEMPLATE`: Specify the custom Nuclei template for the seventh scan.
-- `-t8 TEMPLATE`: Specify the custom Nuclei template for the eighth scan.
+- `-t TEMPLATE`: Specify the custom Nuclei template for the first scan.
+- `-t TEMPLATE`: Specify the custom Nuclei template for the second scan.
+- `-t TEMPLATE`: Specify the custom Nuclei template for the third scan.
+- `-t TEMPLATE`: Specify the custom Nuclei template for the fourth scan.
+- `-t TEMPLATE`: Specify the custom Nuclei template for the fifth scan.
+- `-t TEMPLATE`: Specify the custom Nuclei template for the sixth scan.
+- `-t TEMPLATE`: Specify the custom Nuclei template for the seventh scan.
+- `-t TEMPLATE`: Specify the custom Nuclei template for the eighth scan.
 - `-s`: Run th3Collect0r in silent mode. No output will be displayed.
 - `-d DOMAIN`: Perform scans on a single target domain.
 
