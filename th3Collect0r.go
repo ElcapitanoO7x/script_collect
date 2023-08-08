@@ -2,9 +2,9 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"html"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -15,11 +15,13 @@ import (
 
 const toolVersion = "v1"
 
-var templatesPath = "/fuzzing-templates/"
+var templatesPath = ""
 
 func main() {
 	// Print tool version and ASCII art
-	fmt.Printf("Security Vulnerability Scanner %s\n", toolVersion)
+	fmt.Printf("       Th3 Collect0r %s \n", toolVersion)
+	fmt.Printf("By : Mohamed Ashraf & Ali Emara\n")
+	fmt.Printf("Don't forget to include fuzzing-template/ directory in %s \n", exec.Command("echo $HOME"))
 	printASCIIArt()
 	// Parse command-line arguments
 	args := os.Args[1:]
@@ -33,11 +35,11 @@ func main() {
 		parallelProcesses = 4
 		customNucleiFlags string
 		templateNames     = []string{
-			"/fuzzing-templates/lfi",
-			"/fuzzing-templates/xss/reflected-xss.yaml",
-			"/fuzzing-templates/sqli/error-based.yaml",
-			"/fuzzing-templates/redirect",
-			"/fuzzing-templates/ssrf",
+			"fuzzing-templates/lfi",
+			"fuzzing-templates/xss",
+			"fuzzing-templates/sqli",
+			"fuzzing-templates/redirect",
+			"fuzzing-templates/ssrf",
 		}
 	)
 
@@ -99,7 +101,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error reading domains from file: %v", err)
 	}
-
 	// Process domains and perform fuzzing scans
 	processDomains(domains, parallelProcesses, customNucleiFlags, templateNames)
 }
@@ -132,15 +133,15 @@ func printASCIIArt() {
 
 // Print short usage instructions
 func printShortUsage() {
-	fmt.Println("Usage: go run main.go -f FILE_PATH [OPTIONS]")
-	fmt.Println("       go run main.go -d DOMAIN")
+	fmt.Println("Usage: go run th3collect0r.go -f FILE_PATH [OPTIONS]")
+	fmt.Println("       go run th3collect0r.go -d DOMAIN")
 	fmt.Println("Use --help for a full list of available options.")
 }
 
 // Print full usage instructions
 func printFullUsage() {
-	fmt.Println("Usage: go run main.go -f FILE_PATH [OPTIONS]")
-	fmt.Println("       go run main.go -d DOMAIN")
+	fmt.Println("Usage: go run th3collect0r.go -f FILE_PATH [OPTIONS]")
+	fmt.Println("       go run th3collect0r.go -d DOMAIN")
 	fmt.Println("Scan a list of domains for security vulnerabilities using various tools.")
 	fmt.Println("Options:")
 	fmt.Println("  -f FILE_PATH    Path to the file containing a list of domains to process.")
@@ -170,7 +171,6 @@ func parseInt(s string, defaultValue int) int {
 	}
 	return value
 }
-
 func readDomainsFromFile(filePath string) ([]string, error) {
 	// ... (Rest of the readDomainsFromFile function remains the same)
 	file, err := os.Open(filePath)
@@ -194,9 +194,9 @@ func readDomainsFromFile(filePath string) ([]string, error) {
 }
 
 func processDomains(domains []string, parallelProcesses int, customNucleiFlags string, templateNames []string) {
-	// ... (Implementation of the processDomains function)
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, parallelProcesses)
+
 	for _, domain := range domains {
 		semaphore <- struct{}{}
 		wg.Add(1)
@@ -206,6 +206,7 @@ func processDomains(domains []string, parallelProcesses int, customNucleiFlags s
 			processDomain(domain, customNucleiFlags, templateNames)
 		}(domain)
 	}
+
 	wg.Wait()
 	close(semaphore)
 }
@@ -218,43 +219,106 @@ func processDomain(domain, customNucleiFlags string, templateNames []string) {
 	domainName = strings.TrimPrefix(domainName, "https://")
 
 	// Create a temporary directory
-	tempDir, err := ioutil.TempDir("", "scan-temp-")
+	tempDir, err := os.MkdirTemp("", "scan-temp-")
 	if err != nil {
 		log.Printf("Error creating temporary directory: %v", err)
 		return
 	}
 	defer os.RemoveAll(tempDir)
 
-	// Run waybackurls and gau with the domain
-	waybackFilePath := filepath.Join(tempDir, "wayback.txt")
-	gauFilePath := filepath.Join(tempDir, "gau.txt")
-
-	waybackCmd := exec.Command("waybackurls", domainName)
-	waybackCmd.Stdout, err = os.Create(waybackFilePath)
-	if err != nil {
-		log.Printf("Error creating wayback output file: %v", err)
-		return
-	}
-	gauCmd := exec.Command("gau", domainName)
-	gauCmd.Stdout, err = os.Create(gauFilePath)
-	if err != nil {
-		log.Printf("Error creating gau output file: %v", err)
-		return
-	}
-
-	if err := waybackCmd.Run(); err != nil {
-		log.Printf("Error running waybackurls for %s: %v", domainName, err)
-		return
-	}
-	if err := gauCmd.Run(); err != nil {
-		log.Printf("Error running gau for %s: %v", domainName, err)
-		return
-	}
-
-	// Combine and sort URLs
+	// Declare and initialize the 'urls' map
 	urls := make(map[string]bool)
-	addURLsFromFile(waybackFilePath, urls)
-	addURLsFromFile(gauFilePath, urls)
+
+	var wg sync.WaitGroup
+
+	// Run waybackurls
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		waybackFilePath := filepath.Join(tempDir, "wayback.txt")
+		waybackCmd := exec.Command("waybackurls", domainName)
+		waybackOutput, err := waybackCmd.Output()
+		if err != nil {
+			log.Printf("Error running waybackurls for %s: %v", domainName, err)
+			return
+		}
+		err = os.WriteFile(waybackFilePath, waybackOutput, 0644)
+		if err != nil {
+			log.Printf("Error writing wayback output file: %v", err)
+			return
+		}
+		fmt.Printf("Success: waybackurls output written to %s\n", waybackFilePath)
+		addURLsFromFile(waybackFilePath, urls)
+	}()
+
+	// Run gau
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		gauFilePath := filepath.Join(tempDir, "gau.txt")
+		gauCmd := exec.Command("gau", domainName)
+		gauOutput, err := gauCmd.Output()
+		if err != nil {
+			log.Printf("Error running gau for %s: %v", domainName, err)
+			return
+		}
+		err = os.WriteFile(gauFilePath, gauOutput, 0644)
+		if err != nil {
+			log.Printf("Error writing gau output file: %v", err)
+			return
+		}
+		fmt.Printf("Success: gau output written to %s\n", gauFilePath)
+		addURLsFromFile(gauFilePath, urls)
+	}()
+
+	// Run katana
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		katanaFilePath := filepath.Join(tempDir, "katana.txt")
+		katanaCmd := exec.Command("katana", "-u", domain, "-d", "6", "-jc")
+		var stdout, stderr bytes.Buffer
+		katanaCmd.Stdout = &stdout
+		katanaCmd.Stderr = &stderr
+
+		if err := katanaCmd.Run(); err != nil {
+			log.Printf("Error running katana for %s: %v\nStderr: %s", domainName, err, stderr.String())
+			return
+		}
+
+		katanaOutput := stdout.Bytes()
+		err := os.WriteFile(katanaFilePath, katanaOutput, 0644)
+		if err != nil {
+			log.Printf("Error writing katana output file: %v", err)
+			return
+		}
+		fmt.Printf("Success: katana output written to %s\n", katanaFilePath)
+		addURLsFromFile(katanaFilePath, urls)
+	}()
+
+	// Run hakrawler
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		hakrawlerFilePath := filepath.Join(tempDir, "hakrawler.txt")
+		hakrawlerCmd := exec.Command("hakrawler")
+		hakrawlerCmd.Stdin = strings.NewReader(domain)
+		hakrawlerOutput, err := hakrawlerCmd.Output()
+		if err != nil {
+			log.Printf("Error running hakrawler for %s: %v", domainName, err)
+			return
+		}
+		err = os.WriteFile(hakrawlerFilePath, hakrawlerOutput, 0644)
+		if err != nil {
+			log.Printf("Error writing hakrawler output file: %v", err)
+			return
+		}
+		fmt.Printf("Success: hakrawler output written to %s\n", hakrawlerFilePath)
+		addURLsFromFile(hakrawlerFilePath, urls)
+	}()
+
+	// Wait for all tasks to complete
+	wg.Wait()
 
 	// Perform fuzzing scans
 	urlsFile := filepath.Join(tempDir, "urls.txt")
@@ -268,40 +332,57 @@ func processDomain(domain, customNucleiFlags string, templateNames []string) {
 	}
 	_ = fuzzingFile.Close()
 
+	// Declare and initialize the WaitGroup for Nuclei scans
+	var wgNuclei sync.WaitGroup
+	semaphoreNuclei := make(chan struct{}, len(templateNames))
+
+	var wgHTML sync.WaitGroup
+	semaphoreHTML := make(chan struct{}, len(templateNames))
+
 	for _, templatePath := range templateNames {
-		if err := performFuzzingScans(urlsFile, domain, customNucleiFlags, templatePath); err != nil {
-			log.Printf("Error performing fuzzing scans for %s with template %s: %v", domain, templatePath, err)
-		}
+		semaphoreNuclei <- struct{}{}
+		wgNuclei.Add(1)
+
+		go func(templatePath string) {
+			defer wgNuclei.Done()
+			defer func() { <-semaphoreNuclei }()
+			if err := performNucleiScan(urlsFile, templatePath, domain); err != nil {
+				log.Printf("Error performing Nuclei scan for %s with template %s: %v", domainName, templatePath, err)
+			} else {
+				fmt.Printf("Success: Nuclei scan completed for %s with template %s\n", domainName, templatePath)
+			}
+		}(templatePath)
+		semaphoreHTML <- struct{}{}
+		wgHTML.Add(1)
+
+		go func(templatePath string) {
+			defer wgHTML.Done()
+			defer func() { <-semaphoreNuclei }()
+			if err := generateHTMLReport(domain, strings.Fields(templatePath)); err != nil {
+				log.Printf("Error Generate HTML for %s with template %s: %v", domainName, templatePath, err)
+			} else {
+				fmt.Printf("Success: HTML  completed for %s with template %s\n", domainName, templatePath)
+			}
+		}(templatePath)
 	}
 
-	fmt.Printf("Done processing %s.\n", domain)
+	wgNuclei.Wait()
+	wgHTML.Wait()
+
+	// Generate HTML report using Nuclei results
+	if err := generateHTMLReport(domain, templateNames); err != nil {
+		log.Printf("Error generating HTML report for %s: %v", domain, err)
+	}
+
+	fmt.Printf("Done processing %s\n", domainName)
 }
 
-func addURLsFromFile(filePath string, urls map[string]bool) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		log.Printf("Error opening file %s: %v", filePath, err)
-		return
-	}
-	defer file.Close()
+// Nuclei function
+func performNucleiScan(urlsFile, templatePath, domain string) error {
+	templateName := filepath.Base(templatePath)
+	outputFile := fmt.Sprintf("Results/%s_%s_output.txt", sanitizeFileName(domain), templateName)
 
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		url := strings.TrimSpace(scanner.Text())
-		if url != "" {
-			urls[url] = true
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		log.Printf("Error reading URLs from file %s: %v", filePath, err)
-	}
-}
-
-func performFuzzingScans(urlsFile, domain, customNucleiFlags, templatePath string) error {
-	templateName := strings.TrimPrefix(templatePath, templatesPath)
-	outputFile := fmt.Sprintf("%s_%s_output.txt", sanitizeFileName(domain), templateName)
-
-	nucleiCmd := exec.Command("nuclei", "-l", urlsFile, customNucleiFlags, "-t", templatePath, "-o", outputFile)
+	nucleiCmd := exec.Command("sh", "-c", fmt.Sprintf("nuclei -l %s -t %s -o %s", urlsFile, templatePath, outputFile))
 	nucleiCmd.Stdout = os.Stdout
 	nucleiCmd.Stderr = os.Stderr
 
@@ -311,7 +392,39 @@ func performFuzzingScans(urlsFile, domain, customNucleiFlags, templatePath strin
 
 	return nil
 }
+func addURLsFromFile(filePath string, urls map[string]bool) {
+	// Open the file and create a scanner.
+	file, err := os.Open(filePath)
+	if err != nil {
+		log.Printf("Error opening file: %v", err)
+		return
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
 
+	// Iterate over the lines in the file.
+	for scanner.Scan() {
+		// Get the URL from the current line.
+		url := scanner.Text()
+
+		// Check if the URL contains a protocol.
+		if !strings.Contains(url, "://") {
+			// If not, prepend the `https://` protocol.
+			url = "https://" + url
+		}
+
+		// Add the URL to the map.
+		urls[url] = true
+	}
+
+	// Check for errors reading the file.
+	if err := scanner.Err(); err != nil {
+		log.Printf("Error reading file: %v", err)
+		return
+	}
+}
+
+// Generate HTML Function
 func generateHTMLReport(domain string, templateNames []string) error {
 	reportFileName := fmt.Sprintf("%s.html", sanitizeFileName(domain))
 	reportFile, err := os.Create(reportFileName)
@@ -357,7 +470,7 @@ func generateHTMLReport(domain string, templateNames []string) error {
 		sectionID := fmt.Sprintf("template%d", i+1)
 		sectionTitle := fmt.Sprintf("Template %d Results:", i+1)
 
-		outputFilePath := fmt.Sprintf("%s_%s_output.txt", sanitizeFileName(domain), templatePath)
+		outputFilePath := fmt.Sprintf("Results/%s_%s_output.txt", sanitizeFileName(domain), templatePath)
 		output, err := readOutputFile(outputFilePath)
 		if err != nil {
 			return err
