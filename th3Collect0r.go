@@ -218,21 +218,39 @@ func readDomainsFromFile(filePath string) ([]string, error) {
 
 func processDomains(domains []string, parallelProcesses int, customNucleiFlags string, templateNames []string) {
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, parallelProcesses)
+	semaphore := make(chan struct{}, parallelProcesses) // Allow up to 'parallelProcesses' goroutines in parallel
 
-	for _, domain := range domains {
-		semaphore <- struct{}{}
-		wg.Add(1)
-		go func(domain string) {
-			defer wg.Done()
-			defer func() { <-semaphore }()
-			processDomain(domain, customNucleiFlags, templateNames)
-		}(domain)
+	// Iterate through domains in batches
+	for i := 0; i < len(domains); i += parallelProcesses {
+		// Determine the number of domains to process in this batch
+		batchSize := min(parallelProcesses, len(domains)-i)
+
+		// Launch goroutines for this batch
+		for j := 0; j < batchSize; j++ {
+			domain := domains[i+j]
+			semaphore <- struct{}{} // Acquire a slot in the semaphore
+			wg.Add(1)
+			go func(domain string) {
+				defer wg.Done()
+				defer func() { <-semaphore }() // Release a slot in the semaphore
+				processDomain(domain, customNucleiFlags, templateNames)
+			}(domain)
+		}
+
+		// Wait for the batch to complete before moving to the next
+		wg.Wait()
 	}
 
-	wg.Wait()
-	close(semaphore)
+	close(semaphore) // Close the semaphore channel
 }
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 
 func processDomain(domain, customNucleiFlags string, templateNames []string) {
 	fmt.Printf("Processing %s...\n", domain)
