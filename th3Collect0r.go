@@ -23,6 +23,7 @@ func main() {
 	fmt.Printf("By : Mohamed Ashraf & Ali Emara\n")
 	fmt.Printf("Don't forget to include fuzzing-template/ directory in %s \n", exec.Command("echo $HOME/nuclei-templates"))
 	printASCIIArt()
+
 	// Parse command-line arguments
 	args := os.Args[1:]
 	if len(args) < 1 {
@@ -30,6 +31,7 @@ func main() {
 		return
 	}
 
+	// Default values
 	var (
 		filePath          string
 		parallelProcesses = 4
@@ -40,87 +42,84 @@ func main() {
 			"fuzzing-templates/sqli",
 			"fuzzing-templates/redirect",
 			"fuzzing-templates/ssrf",
-			"",
-			"",
-			"",
-			"",
-			"",
-			"",
-			"",
 		}
+		domain string // Store the domain if -d option is used
 	)
 
-// Parse options
-for i := 0; i < len(args); i++ {
-	arg := args[i]
-	switch arg {
-	case "-d":
-		if i+1 < len(args) {
-			domain := args[i+1]
-			// Process other arguments here if needed
-			for j := i + 2; j < len(args); j++ {
-				// Process other arguments as needed
-				switch args[j] {
-				case "-p":
-					j++
-					parallelProcesses = parseInt(args[j], parallelProcesses)
-				case "-nf":
-					j++
-					customNucleiFlags = args[j]
-				case "-t":
-					if j+1 < len(args) {
-						templateIdx := int(args[j+1][0] - '1')
-						if templateIdx >= 0 && templateIdx < len(templateNames) {
-							j++
-							templateNames[templateIdx] = args[j+1]
-						}
-					} else {
-						fmt.Println("Error: Missing template number after -t option")
-						return
-					}
-				default:
-					fmt.Printf("Unrecognized option: %s\n", args[j])
-				}
+	// Process arguments
+	i := 0
+	for i < len(args) {
+		arg := args[i]
+		switch arg {
+		case "-d":
+			i++
+			if i < len(args) {
+				domain = args[i]
+				i++ // Move to the next argument
+			} else {
+				fmt.Println("Error: Missing domain after -d option")
+				return
 			}
-			processDomain(domain, customNucleiFlags, templateNames)
+		case "-p":
+			i++
+			if i < len(args) {
+				parallelProcesses = parseInt(args[i], parallelProcesses)
+				i++ // Move to the next argument
+			} else {
+				fmt.Println("Error: Missing value after -p option")
+				return
+			}
+		case "-nf":
+			i++
+			if i < len(args) {
+				customNucleiFlags = args[i]
+				i++ // Move to the next argument
+			} else {
+				fmt.Println("Error: Missing value after -nf option")
+				return
+			}
+		case "-t":
+			i++
+			for i < len(args) && !strings.HasPrefix(args[i], "-") {
+				templateNames = append(templateNames, args[i])
+				i++ // Move to the next argument
+			}
+		case "-f":
+			i++
+			if i < len(args) {
+				filePath = args[i]
+				i++ // Move to the next argument
+			} else {
+				fmt.Println("Error: Missing file path after -f option")
+				return
+			}
+		case "-h":
+			printShortUsage()
 			return
-		} else {
-			fmt.Println("Error: Missing domain after -d option")
+		case "--help":
+			printFullUsage()
+			return
+		case "-tp":
+			i++
+			if i < len(args) {
+				templatesPath = args[i]
+				i++ // Move to the next argument
+			} else {
+				fmt.Println("Error: Missing templates path after -tp option")
+				return
+			}
+		default:
+			fmt.Printf("Unrecognized option: %s\n", arg)
 			return
 		}
-	case "-f":
-		if i+1 < len(args) {
-			filePath = args[i+1]
-		} else {
-			fmt.Println("Error: Missing file path after -f option")
-			return
-		}
-	case "-h":
-		printShortUsage()
-		return
-	case "--help":
-		printFullUsage()
-		return
-	case "-p":
-		i++
-		parallelProcesses = parseInt(args[i], parallelProcesses)
-	case "-nf":
-		i++
-		customNucleiFlags = args[i]
-	case "-tp":
-		i++
-		templatesPath = args[i]
-	default:
-		fmt.Printf("Unrecognized option: %s\n", arg)
-		return
 	}
-}
 
+	// ... (Validate input file existence and readability)
 
-	// Validate input file existence and readability
-	fileInfo, err := os.Stat(filePath)
-	if err != nil || fileInfo.IsDir() {
-		log.Fatalf("Error: File not found or not readable: %s", filePath)
+	// If -d option is used, process the specific domain
+	if domain != "" {
+		processDomain(domain, customNucleiFlags, templateNames)
+		return
 	}
 
 	// Read the list of domains from the input file
@@ -128,6 +127,7 @@ for i := 0; i < len(args); i++ {
 	if err != nil {
 		log.Fatalf("Error reading domains from file: %v", err)
 	}
+
 	// Process domains and perform fuzzing scans
 	processDomains(domains, parallelProcesses, customNucleiFlags, templateNames)
 }
@@ -175,11 +175,11 @@ func printFullUsage() {
 	fmt.Println("  -s             Silence mode. Run the script in the background.")
 	fmt.Println("  -p PARALLEL    Number of processes to run in parallel using GNU Parallel. Default: 4.")
 	fmt.Println("  -nf FLAGS      Custom Nuclei flags to use for all scans.")
-	fmt.Println("  -t1 TEMPLATE   Specify the custom Nuclei template for the first scan. Default: /fuzzing-templates/lfi")
-	fmt.Println("  -t2 TEMPLATE   Specify the custom Nuclei template for the second scan. Default: /fuzzing-templates/xss/reflected-xss.yaml")
-	fmt.Println("  -t3 TEMPLATE   Specify the custom Nuclei template for the third scan. Default: /fuzzing-templates/sqli/error-based.yaml")
-	fmt.Println("  -t4 TEMPLATE   Specify the custom Nuclei template for the fourth scan. Default: /fuzzing-templates/redirect")
-	fmt.Println("  -t5 TEMPLATE   Specify the custom Nuclei template for the fifth scan. Default: /fuzzing-templates/ssrf")
+	fmt.Println("  -t TEMPLATE   Specify the custom Nuclei template for the first scan. Default: /fuzzing-templates/lfi")
+	fmt.Println("  -t TEMPLATE   Specify the custom Nuclei template for the second scan. Default: /fuzzing-templates/xss/reflected-xss.yaml")
+	fmt.Println("  -t TEMPLATE   Specify the custom Nuclei template for the third scan. Default: /fuzzing-templates/sqli/error-based.yaml")
+	fmt.Println("  -t TEMPLATE   Specify the custom Nuclei template for the fourth scan. Default: /fuzzing-templates/redirect")
+	fmt.Println("  -t TEMPLATE   Specify the custom Nuclei template for the fifth scan. Default: /fuzzing-templates/ssrf")
 	fmt.Println("  -tp TEMPLATES_PATH   Path to the custom Nuclei templates. Default: /fuzzing-templates/")
 	fmt.Println("  -h, --help     Print this help message and exit.")
 	fmt.Println("")
@@ -254,7 +254,6 @@ func min(a, b int) int {
 	}
 	return b
 }
-
 
 func processDomain(domain, customNucleiFlags string, templateNames []string) {
 	fmt.Printf("Processing %s...\n", domain)
