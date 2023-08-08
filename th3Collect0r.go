@@ -50,68 +50,72 @@ func main() {
 		}
 	)
 
-	// Parse options
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
-		switch arg {
-		case "-d":
-			if i+1 < len(args) {
-				domain := args[i+1]
-				// Process other arguments here if needed
-				for j := i + 2; j < len(args); j++ {
-					// Process other arguments as needed
-					switch args[j] {
-					case "-p":
-						j++
-						parallelProcesses = parseInt(args[j], parallelProcesses)
-					case "-nf":
-						j++
-						customNucleiFlags = args[j]
-					default:
-						if strings.HasPrefix(args[j], "-t") {
-							templateIdx := int(args[j][2] - '1')
-							if templateIdx >= 0 && templateIdx < len(templateNames) {
-								templateNames[templateIdx] = args[j+1]
-							}
-							j++ // Skip the template argument value
-						} else {
-							fmt.Printf("Unrecognized option: %s\n", args[j])
+// Parse options
+for i := 0; i < len(args); i++ {
+	arg := args[i]
+	switch arg {
+	case "-d":
+		if i+1 < len(args) {
+			domain := args[i+1]
+			// Process other arguments here if needed
+			for j := i + 2; j < len(args); j++ {
+				// Process other arguments as needed
+				switch args[j] {
+				case "-p":
+					j++
+					parallelProcesses = parseInt(args[j], parallelProcesses)
+				case "-nf":
+					j++
+					customNucleiFlags = args[j]
+				case "-t":
+					if j+1 < len(args) {
+						templateIdx := int(args[j+1][0] - '1')
+						if templateIdx >= 0 && templateIdx < len(templateNames) {
+							j++
+							templateNames[templateIdx] = args[j+1]
 						}
+					} else {
+						fmt.Println("Error: Missing template number after -t option")
+						return
 					}
+				default:
+					fmt.Printf("Unrecognized option: %s\n", args[j])
 				}
-				processDomain(domain, customNucleiFlags, templateNames)
-				return
-			} else {
-				fmt.Println("Error: Missing domain after -d option")
-				return
 			}
-		case "-f":
-			if i+1 < len(args) {
-				filePath = args[i+1]
-			} else {
-				fmt.Println("Error: Missing file path after -f option")
-				return
-			}
-		case "-h":
-			printShortUsage()
+			processDomain(domain, customNucleiFlags, templateNames)
 			return
-		case "--help":
-			printFullUsage()
-			return
-		case "-p":
-			i++
-			parallelProcesses = parseInt(args[i], parallelProcesses)
-		case "-nf":
-			i++
-			customNucleiFlags = args[i]
-		case "-tp":
-			i++
-			templatesPath = args[i]
-		default:
-			fmt.Printf("Unrecognized option: %s\n", arg)
+		} else {
+			fmt.Println("Error: Missing domain after -d option")
 			return
 		}
+	case "-f":
+		if i+1 < len(args) {
+			filePath = args[i+1]
+		} else {
+			fmt.Println("Error: Missing file path after -f option")
+			return
+		}
+	case "-h":
+		printShortUsage()
+		return
+	case "--help":
+		printFullUsage()
+		return
+	case "-p":
+		i++
+		parallelProcesses = parseInt(args[i], parallelProcesses)
+	case "-nf":
+		i++
+		customNucleiFlags = args[i]
+	case "-tp":
+		i++
+		templatesPath = args[i]
+	default:
+		fmt.Printf("Unrecognized option: %s\n", arg)
+		return
 	}
+}
+
 
 	// Validate input file existence and readability
 	fileInfo, err := os.Stat(filePath)
