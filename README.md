@@ -82,7 +82,7 @@ Options:
 4. Customize the Nuclei flags and templates:
 
    ```bash
-   ./th3Collect0r -nf "-sa -rl 50" -t /path/to/custom-template.yaml domains.txt
+   ./th3Collect0r -nf "-sa -rl 50" -t /nuclei-templates/path/to/custom-template.yaml domains.txt
    ```
 
 ## License
