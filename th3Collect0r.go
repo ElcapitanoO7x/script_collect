@@ -188,7 +188,55 @@ func printFullUsage() {
 	fmt.Println("")
 	fmt.Println("Note: Make sure you have proper authorization to perform security scans on the provided domains.")
 }
+//Find Ip Func
+func findRealIPAddress(domain string) error {
+    ips, err := net.LookupHost(domain)
+    if err != nil {
+        return err
+    }
 
+    realIPAddress := ips[0] // Take the first IP address
+    outputFile := fmt.Sprintf("Results/%s_real_ip.txt", sanitizeFileName(domain))
+    
+    err = os.WriteFile(outputFile, []byte(realIPAddress), 0644)
+    if err != nil {
+        return err
+    }
+
+    fmt.Printf("Success: Real IP address for %s is %s\n", domain, realIPAddress)
+    return nil
+}
+
+//SHODAN Func
+func requestShodanData(ipAddress string) error {
+    apiUrl := fmt.Sprintf("https://internetdb.shodan.io/%s", ipAddress)
+    
+    response, err := http.Get(apiUrl)
+    if err != nil {
+        return err
+    }
+    defer response.Body.Close()
+
+    if response.StatusCode != http.StatusOK {
+        return fmt.Errorf("HTTP request to Shodan API failed with status code: %d", response.StatusCode)
+    }
+
+    data, err := ioutil.ReadAll(response.Body)
+    if err != nil {
+        return err
+    }
+
+    outputFile := "shodan_results.txt"
+    err = os.WriteFile(outputFile, data, 0644)
+    if err != nil {
+        return err
+    }
+
+    fmt.Printf("Success: Shodan data for IP %s saved to %s\n", ipAddress, outputFile)
+    return nil
+}
+
+//Parseint func
 func parseInt(s string, defaultValue int) int {
 	// ... (Rest of the parseInt function remains the same)
 	value := defaultValue
@@ -424,6 +472,21 @@ func processDomain(domain, customNucleiFlags string, templateNames []string) {
 	if err := generateHTMLReport(domain, templateNames); err != nil {
 		log.Printf("Error generating HTML report for %s: %v", domain, err)
 	}
+	// Find real IP address and save it to a file
+if err := findRealIPAddress(domain); err != nil {
+    log.Printf("Error finding real IP address: %v", err)
+}
+
+// Request Shodan data for the real IP address
+realIPFile := fmt.Sprintf("Results/%s_real_ip.txt", sanitizeFileName(domain))
+realIP, err := os.ReadFile(realIPFile)
+if err != nil {
+    log.Printf("Error reading real IP address file: %v", err)
+} else {
+    if err := requestShodanData(strings.TrimSpace(string(realIP))); err != nil {
+        log.Printf("Error requesting Shodan data: %v", err)
+    }
+}
 
 	fmt.Printf("Done processing %s\n", domainName)
 }
