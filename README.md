@@ -53,12 +53,12 @@ Options:
 - `-t TEMPLATE`: Specify the custom Nuclei template for the third scan.
 - `-t TEMPLATE`: Specify the custom Nuclei template for the fourth scan.
 - `-t TEMPLATE`: Specify the custom Nuclei template for the fifth scan.
-- `-t TEMPLATE`: Specify the custom Nuclei template for the sixth scan.
-- `-t TEMPLATE`: Specify the custom Nuclei template for the seventh scan.
-- `-t TEMPLATE`: Specify the custom Nuclei template for the eighth scan.
 - `-s`: Run th3Collect0r in silent mode. No output will be displayed.
 - `-d DOMAIN`: Perform scans on a single target domain.
 
+```
+Keep in mind That all template you picked must be inside ~/nuclei-templates
+```
 ## Examples
 
 1. Basic usage with a list of domains in a file:
