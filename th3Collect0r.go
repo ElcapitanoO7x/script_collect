@@ -12,8 +12,8 @@ import (
 	"strings"
 	"sync"
 	"net"
-	"http"
-	"ioutil"
+	"net/http"
+	"io/ioutil"
 )
 
 const toolVersion = "v1.0.1"
